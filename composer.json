@@ -1,12 +1,20 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "flisolapp/api",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "FLISoL unified API - admin, subscription and certified modules.",
+    "keywords": ["flisolapp", "flisol", "laravel"],
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "ext-bcmath": "*",
+        "ext-fileinfo": "*",
+        "ext-gd": "*",
+        "chillerlan/php-qrcode": "^6.0",
+        "dedoc/scramble": "^0.13",
+        "laravel/sanctum": "^4.0",
+        "league/flysystem-aws-s3-v3": "^3.0",
+        "sentry/sentry-laravel": "^4.0",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0"
     },
@@ -65,7 +73,23 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "clear-all": [
+            "@php -r \"echo '🔄 Clearing config, route, view and event cache...' . PHP_EOL;\"",
+            "@php artisan optimize:clear",
+            "@php -r \"echo '🗑️  Clearing application cache (storage/framework/cache/data)...' . PHP_EOL;\"",
+            "@php artisan cache:clear",
+            "@php -r \"echo '🗑️  Clearing compiled views...' . PHP_EOL;\"",
+            "@php artisan view:clear",
+            "@php -r \"echo '🗑️  Clearing sessions...' . PHP_EOL;\"",
+            "@php -r \"array_map('unlink', glob('storage/framework/sessions/*'));\"",
+            "@php -r \"echo '🗑️  Clearing residual manual cache...' . PHP_EOL;\"",
+            "@php -r \"array_map('unlink', glob('storage/framework/cache/data/*'));\"",
+            "@php -r \"echo '✅ Full cleanup complete!' . PHP_EOL;\""
         ]
+    },
+    "scripts-descriptions": {
+        "clear-all": "Clears all Laravel caches: config, route, view, application, sessions and residual cache files."
     },
     "extra": {
         "laravel": {
