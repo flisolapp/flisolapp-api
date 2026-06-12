@@ -57,6 +57,15 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
+        ],
+
+        // Local cache for certificate templates, fonts and generated PNGs
+        // downloaded from S3. Lives in framework/cache/data so it is
+        // automatically excluded from git and cleared by `artisan cache:clear`.
+        'storage_cache' => [
+            'driver' => 'local',
+            'root'   => storage_path('framework/cache/data'),
+            'throw'  => false,
             'report' => false,
         ],
 
