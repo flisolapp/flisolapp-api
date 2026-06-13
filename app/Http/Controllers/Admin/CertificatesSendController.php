@@ -7,12 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Mail\CertificateAvailableMail;
 use App\Models\People;
 use App\Models\PeopleCertificate;
+use App\Services\MailerService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class CertificatesSendController extends Controller
 {
@@ -48,21 +48,21 @@ class CertificatesSendController extends Controller
         if (!$certificate) {
             return response()->json([
                 'error' => 'Certificate not found.',
-                'code'  => $code,
+                'code' => $code,
             ], 404);
         }
 
         if ($certificate->removed_at !== null) {
             return response()->json([
                 'error' => 'Certificate has been removed and cannot be sent.',
-                'code'  => $code,
+                'code' => $code,
             ], 422);
         }
 
         if ($certificate->sent_at !== null) {
             return response()->json([
-                'error'   => 'Certificate email was already sent.',
-                'code'    => $code,
+                'error' => 'Certificate email was already sent.',
+                'code' => $code,
                 'sent_at' => $certificate->sent_at,
             ], 409);
         }
@@ -73,13 +73,13 @@ class CertificatesSendController extends Controller
 
         if (!$person) {
             Log::warning('CertificatesSendController: person not found or removed', [
-                'people_id'  => $certificate->people_id,
+                'people_id' => $certificate->people_id,
                 'edition_id' => $certificate->edition_id,
-                'code'       => $code,
+                'code' => $code,
             ]);
 
             return response()->json([
-                'error'     => 'Person not found or has been removed.',
+                'error' => 'Person not found or has been removed.',
                 'people_id' => $certificate->people_id,
             ], 422);
         }
@@ -92,18 +92,18 @@ class CertificatesSendController extends Controller
         //
         // Name: trim and collapse internal spaces; must be non-empty.
         // Email: trim and lowercase; must pass filter_var validation.
-        $name  = trim(preg_replace('/\s+/', ' ', $person->name ?? ''));
+        $name = trim(preg_replace('/\s+/', ' ', $person->name ?? ''));
         $email = strtolower(trim($person->email ?? ''));
 
         if ($name === '') {
             Log::warning('CertificatesSendController: person has no valid name', [
-                'people_id'  => $person->id,
+                'people_id' => $person->id,
                 'edition_id' => $certificate->edition_id,
-                'code'       => $code,
+                'code' => $code,
             ]);
 
             return response()->json([
-                'error'     => 'Person has no valid name on record.',
+                'error' => 'Person has no valid name on record.',
                 'people_id' => $person->id,
             ], 422);
         }
@@ -112,30 +112,30 @@ class CertificatesSendController extends Controller
 
         if ($firstName === '') {
             Log::warning('CertificatesSendController: person has no valid first name', [
-                'people_id'  => $person->id,
+                'people_id' => $person->id,
                 'edition_id' => $certificate->edition_id,
-                'code'       => $code,
+                'code' => $code,
             ]);
 
             return response()->json([
-                'error'     => 'Person has no valid first name on record.',
+                'error' => 'Person has no valid first name on record.',
                 'people_id' => $person->id,
             ], 422);
         }
 
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             Log::warning('CertificatesSendController: person has no valid email', [
-                'people_id'     => $person->id,
-                'edition_id'    => $certificate->edition_id,
-                'email_raw'     => $person->email,
+                'people_id' => $person->id,
+                'edition_id' => $certificate->edition_id,
+                'email_raw' => $person->email,
                 'email_cleaned' => $email,
-                'code'          => $code,
+                'code' => $code,
             ]);
 
             return response()->json([
-                'error'     => 'Person has no valid email address on record.',
+                'error' => 'Person has no valid email address on record.',
                 'people_id' => $person->id,
-                'name'      => $name,
+                'name' => $name,
             ], 422);
         }
 
@@ -146,18 +146,23 @@ class CertificatesSendController extends Controller
         // successful send the worst outcome is a duplicate email on retry —
         // acceptable and far better than a silent miss.
         try {
-            Mail::to($email)->send(new CertificateAvailableMail($firstName, $email));
+            // Mail::to($email)->send(new CertificateAvailableMail($firstName, $email));
+            app(MailerService::class)->send(
+                to: $email,
+                mailable: new CertificateAvailableMail($firstName, $email),
+                name: $firstName,
+            );
         } catch (Exception $e) {
             Log::error('CertificatesSendController: mailer error', [
-                'people_id'  => $person->id,
-                'email'      => $email,
+                'people_id' => $person->id,
+                'email' => $email,
                 'edition_id' => $certificate->edition_id,
-                'code'       => $code,
-                'exception'  => $e,
+                'code' => $code,
+                'exception' => $e,
             ]);
 
             return response()->json([
-                'error'   => 'Failed to send email. No certificates were marked as sent.',
+                'error' => 'Failed to send email. No certificates were marked as sent.',
                 'details' => $e->getMessage(),
             ], 500);
         }
@@ -176,7 +181,7 @@ class CertificatesSendController extends Controller
                 ->whereNull('sent_at')
                 ->whereNotNull('code')
                 ->update([
-                    'sent_at'    => $now,
+                    'sent_at' => $now,
                     'updated_at' => $now,
                 ]);
 
@@ -187,15 +192,15 @@ class CertificatesSendController extends Controller
             // The email was already sent.  Log prominently so an admin can
             // manually reconcile if needed.
             Log::error('CertificatesSendController: email sent but failed to stamp sent_at', [
-                'people_id'  => $person->id,
-                'email'      => $email,
+                'people_id' => $person->id,
+                'email' => $email,
                 'edition_id' => $certificate->edition_id,
-                'code'       => $code,
-                'exception'  => $e,
+                'code' => $code,
+                'exception' => $e,
             ]);
 
             return response()->json([
-                'error'   => 'Email was sent but certificates could not be marked as sent. Please reconcile manually.',
+                'error' => 'Email was sent but certificates could not be marked as sent. Please reconcile manually.',
                 'details' => $e->getMessage(),
             ], 500);
         }
@@ -209,25 +214,25 @@ class CertificatesSendController extends Controller
             ->get(['id', 'code', 'sent_at']);
 
         Log::info('CertificatesSendController: email sent', [
-            'people_id'         => $person->id,
-            'email'             => $email,
-            'edition_id'        => $certificate->edition_id,
-            'code'              => $code,
+            'people_id' => $person->id,
+            'email' => $email,
+            'edition_id' => $certificate->edition_id,
+            'code' => $code,
             'certificates_sent' => $sentCertificates->count(),
         ]);
 
         return response()->json([
-            'message'    => 'Certificate availability email sent successfully.',
+            'message' => 'Certificate availability email sent successfully.',
             'edition_id' => $certificate->edition_id,
-            'person'     => [
-                'id'        => $person->id,
-                'name'      => $name,
-                'email'     => $email,
+            'person' => [
+                'id' => $person->id,
+                'name' => $name,
+                'email' => $email,
             ],
             'certificates_sent' => $sentCertificates->count(),
-            'certificates'      => $sentCertificates->map(fn($c) => [
-                'id'      => $c->id,
-                'code'    => $c->code,
+            'certificates' => $sentCertificates->map(fn($c) => [
+                'id' => $c->id,
+                'code' => $c->code,
                 'sent_at' => $c->sent_at,
             ])->values(),
         ], 201);

@@ -35,4 +35,27 @@ return [
         ],
     ],
 
+    // ── Mail transport driver ─────────────────────────────────────────────────
+    // "mailersend"  → MailerSendApiTransport  (HTTPS, no SMTP — use on A2Hosting)
+    // "smtp"        → SmtpMailTransport        (Laravel Mail facade, local dev)
+    'mail_transport' => env('MAIL_TRANSPORT', 'smtp'),
+
+    // ── MailerSend ────────────────────────────────────────────────────────────
+    // Token: https://app.mailersend.com/api-tokens
+    // The sending domain must be verified in MailerSend.
+    'mailersend' => [
+        'token' => env('MAILERSEND_API_TOKEN'),
+    ],
+
+    // ── Mailgun (future) ──────────────────────────────────────────────────────
+    // 'mailgun' => [
+    //     'domain' => env('MAILGUN_DOMAIN'),
+    //     'secret' => env('MAILGUN_SECRET'),
+    // ],
+
+    // ── Mandrill (future) ─────────────────────────────────────────────────────
+    // 'mandrill' => [
+    //     'secret' => env('MANDRILL_API_KEY'),
+    // ],
+
 ];
